@@ -1,0 +1,6 @@
+jupyterlab==0.35.3
+torch==1.1.0
+torchvision==0.3.0
+optuna==0.13.0
+easydict==1.9
+graphviz==0.10.1
