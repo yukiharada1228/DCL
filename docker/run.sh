@@ -23,7 +23,8 @@ docker run \
     --runtime=nvidia \
     --ipc=host \
     --net=host \
-    -v ${HOME}/SCOPE:/workspace/SCOPE \
+    -v ${HOME}:/workspace \
+    -v /SSD/dataset:/workspace/DCL/dataset \
     --user ${nb_uid}:${nb_gid} \
     --name=${container_name} \
-    ${image_name} bash -c "cd /workspace/SCOPE/DCL && $cmd"
+    ${image_name} bash -c "cd /workspace/DCL && $cmd"
