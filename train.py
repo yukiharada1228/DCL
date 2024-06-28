@@ -66,12 +66,12 @@ get_ipython().magic('env CUDA_VISIBLE_DEVICES=$args.gpu_id')
 manualSeed = 0
 
 if args.dataset == "CIFAR10":
-    DATA_PATH = "./dataset/CIFAR10/"
+    DATA_PATH = "./dataset/CIFAR-10/"
     NUM_CLASS = 10
     SCHEDULE = [60,120,180]
     EPOCHS = 200    
 elif args.dataset == "CIFAR100":
-    DATA_PATH = "./dataset/CIFAR100/"
+    DATA_PATH = "./dataset/CIFAR-100/"
     NUM_CLASS = 100
     SCHEDULE = [60,120,180]
     EPOCHS = 200
@@ -171,7 +171,7 @@ config = copy.deepcopy(config)
 
 def create_object(config):
     # set seed value
-    config.manualSeed = random.randint(1,10000)
+    config.manualSeed = manualSeed
     random.seed(config.manualSeed)
     torch.manual_seed(config.manualSeed)
     torch.cuda.manual_seed_all(config.manualSeed)
