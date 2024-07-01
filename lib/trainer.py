@@ -38,43 +38,36 @@ class ClassificationTrainer():
     def measure(self, output, target):
         return calc_accuracy(output, target)
     
-    def update_meter(self, loss, acc, loss_meter, top1_meter, batch_size):
-        # record loss and accuracy 
-        loss_meter.update(loss.item(), batch_size)
-        top1_meter.update(acc[0].item(), batch_size)
+    def update_meter(self, metric_dict, values, batch_size):
+        for key, value in values.items():
+            if key in metric_dict:
+                metric_dict[key].update(value, batch_size)
         return
     
-    def write_log(self, logs, loss_meters, top1_meters, epoch, mode="train"):
-        for log, loss_meter, top1_meter in zip(logs.net, loss_meters, top1_meters):
-            log["epoch_log"][epoch][mode+"_loss"] = loss_meter.avg
-            log["epoch_log"][epoch][mode+"_accuracy"] = top1_meter.avg
+    def write_log(self, logs, metrics, epoch, mode="train"):
+        for log, metric_dict in zip(logs.net, metrics):
+            for metric_name, meter in metric_dict.items():
+                log["epoch_log"][epoch][f"{mode}_{metric_name}"] = meter.avg
         return
     
     def train_on_batch(self, input_, target, models, criterions, optimizers, 
-                       logs, loss_meters, top1_meters, **kwargs):
-                
+                       logs, metrics, **kwargs):
         outputs = self.compute_outputs(models, input_, target)
-        
         outputs = self.post_forward(models, outputs)
                 
         losses = []
-        for model_id, (criterion,
-                       optimizer,
-                       log,
-                       loss_meter,
-                       top1_meter) in enumerate(zip(criterions,
-                                                    optimizers,
-                                                    logs.net,
-                                                    loss_meters,
-                                                    top1_meters)):
-            
+        for model_id, (criterion, optimizer, log, metric) in enumerate(zip(criterions, optimizers, logs.net, metrics)):
             loss = criterion(model_id, outputs, target, log, **kwargs)
             losses += [loss]
             
             acc = self.calc_accuracy(outputs[model_id], target)
-            
-            self.update_meter(loss, acc, loss_meter, top1_meter, batch_size=input_.size(0))
-        
+            # 現在の学習率を取得
+            current_lr = optimizer.param_groups[0]['lr']
+            self.update_meter(metric, {
+                "loss": loss.item(),
+                "accuracy": acc[0].item(),
+                "learning_rate": current_lr  # 学習率を記録
+            }, batch_size=input_.size(0))
         
         # initialize gradient
         for optimizer in optimizers:
@@ -84,7 +77,7 @@ class ClassificationTrainer():
         # compute gradient
         for id_ in update_idxs:
             losses[id_].backward(retain_graph=True)
-        # update paramaters
+        # update parameters
         for id_ in update_idxs:
             optimizers[id_].step()
         
@@ -93,11 +86,14 @@ class ClassificationTrainer():
     
     def train_on_dataset(self, data_loader, models, criterions, optimizers, epoch, logs, **kwargs):
         """
-            train on dataset for one epoch
+        train on dataset for one epoch
         """
         
-        loss_meters = [utils.AverageMeter() for i in range(len(models))]
-        top1_meters = [utils.AverageMeter() for i in range(len(models))]
+        metrics = [{
+            "loss": utils.AverageMeter(),
+            "accuracy": utils.AverageMeter(),
+            "learning_rate": utils.AverageMeter()  # 学習率用のメーターを追加
+        } for _ in range(len(models))]
         
         for model in models:
             model.train()
@@ -105,39 +101,36 @@ class ClassificationTrainer():
         for i, (input_, target) in enumerate(data_loader):            
             input_, target = self.to_cuda(input_, target)
             self.train_on_batch(input_, target, models, criterions, optimizers, 
-                                logs, loss_meters, top1_meters, **kwargs)
+                                logs, metrics, **kwargs)
         
-        self.write_log(logs, loss_meters, top1_meters, epoch, mode="train")
+        self.write_log(logs, metrics, epoch, mode="train")
         
         return logs
     
     
-    def validate_on_batch(self, input_, target, models, criterions, logs, loss_meters, top1_meters, **kwargs):
+    def validate_on_batch(self, input_, target, models, criterions, logs, metrics, **kwargs):
         outputs = self.compute_outputs(models, input_, target)        
         outputs = self.post_forward(models, outputs)        
-        for model_id, (criterion,
-                       log,
-                       loss_meter,
-                       top1_meter) in enumerate(zip(criterions,
-                                                    logs.net,
-                                                    loss_meters,
-                                                    top1_meters)):
-            
+        for model_id, (criterion, log, metric) in enumerate(zip(criterions, logs.net, metrics)):
             loss = criterion(model_id, outputs, target, log=None, **kwargs)
-            
             acc = self.calc_accuracy(outputs[model_id], target)
             
-            self.update_meter(loss, acc, loss_meter, top1_meter, batch_size=input_.size(0))
+            self.update_meter(metric, {
+                "loss": loss.item(),
+                "accuracy": acc[0].item()
+            }, batch_size=input_.size(0))
         
         return
     
     def validate_on_dataset(self, data_loader, models, criterions, epoch, logs, **kwargs):
         """
-            validate on dataset
+        validate on dataset
         """
         
-        loss_meters = [utils.AverageMeter() for i in range(len(models))]
-        top1_meters = [utils.AverageMeter() for i in range(len(models))]
+        metrics = [{
+            "loss": utils.AverageMeter(),
+            "accuracy": utils.AverageMeter()
+        } for _ in range(len(models))]
         
         for model in models:
             model.eval()
@@ -145,9 +138,9 @@ class ClassificationTrainer():
         for i, (input_, target) in enumerate(data_loader):
             input_, target = self.to_cuda(input_, target)            
             self.validate_on_batch(input_, target, models, criterions,
-                                   logs, loss_meters, top1_meters)
+                                   logs, metrics, **kwargs)
         
-        self.write_log(logs, loss_meters, top1_meters, epoch, mode="test")
+        self.write_log(logs, metrics, epoch, mode="test")
         
         return logs
 
