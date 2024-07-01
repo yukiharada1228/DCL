@@ -10,6 +10,8 @@ import sys
 import pdb
 import torch
 
+import math
+
 
 # In[ ]:
 
@@ -117,16 +119,34 @@ def print_log(print_string, log):
     print("{}".format(print_string))
     log.write('{}\n'.format(print_string))
     log.flush()
-    
-def adjust_learning_rate(optimizer, epoch, gammas, schedule, learning_rate):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = learning_rate
-    assert len(gammas) == len(schedule), "length of gammas and schedule should be equal"
-    for (gamma, step) in zip(gammas, schedule):
-        if (epoch >= step):
-            lr = lr * gamma            
+
+def adjust_learning_rate(optimizer, epoch, optim_args):
+    scheduler_type = optim_args.get('scheduler_type', 'step')
+    learning_rate = optim_args['args']['lr']
+
+    if scheduler_type == 'step':
+        gammas = optim_args.get('gammas', [])
+        schedule = optim_args.get('schedule', [])
+        lr = learning_rate
+        for (gamma, step) in zip(gammas, schedule):
+            if epoch >= step:
+                lr = lr * gamma
+            else:
+                break
+    elif scheduler_type == 'cosine':
+        num_warmup_steps = optim_args.get('num_warmup_steps', 10)
+        num_training_steps = optim_args.get('num_training_steps', 200)
+        num_cycles = optim_args.get('num_cycles', 0.5)
+        current_step = optim_args.get('current_step', epoch)
+
+        if current_step < num_warmup_steps:
+            lr = learning_rate * float(current_step) / float(max(1, num_warmup_steps))
         else:
-            break
+            progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
+            lr = learning_rate * max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress)))
+    else:
+        raise ValueError(f"Unsupported scheduler type: {scheduler_type}")
+    
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     return lr

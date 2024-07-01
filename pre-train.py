@@ -62,12 +62,10 @@ manualSeed = 0
 if args.dataset == "CIFAR10":
     DATA_PATH = "./dataset/CIFAR-10/"
     NUM_CLASS = 10
-    SCHEDULE = [60,120,180]
     EPOCHS = 200    
 elif args.dataset == "CIFAR100":
     DATA_PATH = "./dataset/CIFAR-100/"
     NUM_CLASS = 100
-    SCHEDULE = [60,120,180]
     EPOCHS = 200
     
 optim_setting = {
@@ -79,8 +77,9 @@ optim_setting = {
         "weight_decay": 0.0005,
         "nesterov": True,
     },
-    "schedule": SCHEDULE,
-    "gammas": [0.1,0.1,0.1],
+    "scheduler_type": 'cosine',
+    "num_warmup_steps": 10,
+    "num_training_steps": EPOCHS,
 }
 
 args_factory = easydict.EasyDict({
