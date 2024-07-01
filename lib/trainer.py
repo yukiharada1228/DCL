@@ -163,12 +163,7 @@ class ClassificationTrainer():
             start_time = time.time()
             
             for optimizer, model_args in zip(optimizers, self.args.models):
-                utils.adjust_learning_rate(optimizer,
-                                           epoch,
-                                           model_args.optim.gammas, 
-                                           model_args.optim.schedule,
-                                           model_args.optim.args.lr)
-                        
+                utils.adjust_learning_rate(optimizer, epoch, model_args.optim)
             kwargs = {} if kwargs is None else kwargs            
             kwargs.update({
                 "_trainer": self,
