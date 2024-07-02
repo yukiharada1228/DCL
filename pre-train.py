@@ -69,13 +69,12 @@ elif args.dataset == "CIFAR100":
     EPOCHS = 200
     
 optim_setting = {
-    "name": "SGD",
+    "name": "AdamW",
     "args":
     {
-        "lr": 0.1,
-        "momentum": 0.9,
-        "weight_decay": 0.0005,
-        "nesterov": True,
+        "lr": 3e-4,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.01,
     },
     "scheduler_type": 'cosine',
     "num_warmup_steps": 10,
