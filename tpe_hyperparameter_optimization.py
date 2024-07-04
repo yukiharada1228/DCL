@@ -61,13 +61,27 @@ def create_object(config):
 
     return trainer, nets, criterions, optimizers, train_loader, test_loader, logs
 
+def inform_optuna(**kwargs):
+    trial = kwargs["_trial"]
+    logs = kwargs["_logs"]
+    epoch = kwargs["_epoch"]
+    
+    error = 100 - logs[0]["epoch_log"][epoch]["test_accuracy"]
+    trial.report(error, step=epoch)
+    
+    if trial.should_prune():
+        raise optuna.structs.TrialPruned()
+    return
+
 def objective(trial):
     # Optunaが提案する学習率
     lr = trial.suggest_loguniform('lr', 1e-6, 1.0)
+    weight_decay = trial.suggest_loguniform('weight_decay', 1e-6, 1.0)
     
     # 設定の複製と学習率の更新
     trial_config = copy.deepcopy(config)
     trial_config.models[0].optim.args.lr = lr
+    trial_config.models[0].optim.args.weight_decay = weight_decay
     
     # trialごとの保存ディレクトリを設定
     trial_save_dir = os.path.join(config.trainer.base_dir, f"{trial.number:04}/")
@@ -81,11 +95,20 @@ def objective(trial):
     
     # オブジェクトの作成
     trainer, nets, criterions, optimizers, train_loader, test_loader, logs = create_object(trial_config)
-    
+
+    # make kwargs
+    kwargs = {"_trial": trial,
+              "_callback":inform_optuna}
+
+    # set seed
+    trial.set_user_attr("seed", config.manualSeed)
+
     # 訓練の実行
-    best_acc = trainer.train(nets, criterions, optimizers, train_loader, test_loader, logs)
+    trainer.train(nets, criterions, optimizers, train_loader, test_loader, logs, trial=trial, **kwargs)
+
+    acc = 100 - logs[0]["epoch_log"][config.trainer.epochs]["test_accuracy"]
     
-    return best_acc
+    return acc
 
 def main():
     global config
@@ -118,7 +141,7 @@ def main():
         {
             "lr": None,
             "betas": (0.9, 0.999),
-            "weight_decay": 0.01,
+            "weight_decay": None,
         },
         "scheduler_type": 'cosine',
         "num_warmup_steps": 10,
