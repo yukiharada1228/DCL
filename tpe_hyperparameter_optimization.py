@@ -75,13 +75,17 @@ def inform_optuna(**kwargs):
 
 def objective(trial):
     # Optunaが提案する学習率
-    lr = trial.suggest_loguniform('lr', 1e-6, 1.0)
-    weight_decay = trial.suggest_loguniform('weight_decay', 1e-6, 1.0)
+    lr = trial.suggest_loguniform('lr', 1e-7, 1.0)
+    weight_decay = trial.suggest_loguniform('weight_decay', 1e-7, 1.0)
+    beta1 = trial.suggest_uniform('beta1', 0.85, 0.95)
+    amsgrad = trial.suggest_categorical('amsgrad', [True, False])
     
     # 設定の複製と学習率の更新
     trial_config = copy.deepcopy(config)
     trial_config.models[0].optim.args.lr = lr
     trial_config.models[0].optim.args.weight_decay = weight_decay
+    trial_config.models[0].optim.args.betas = (beta1, 0.999)
+    trial_config.models[0].optim.args.amsgrad = amsgrad
     
     # trialごとの保存ディレクトリを設定
     trial_save_dir = os.path.join(config.trainer.base_dir, f"{trial.number:04}/")
@@ -140,8 +144,9 @@ def main():
         "args":
         {
             "lr": None,
-            "betas": (0.9, 0.999),
+            "betas": None,
             "weight_decay": None,
+            "amsgrad": None,
         },
         "scheduler_type": 'cosine',
         "num_warmup_steps": 10,
@@ -260,7 +265,7 @@ def main():
                                 pruner=optuna.pruners.NopPruner(),
                                 direction="minimize",
                                 load_if_exists=True)
-    study.optimize(objective, n_trials=10, timeout=None, n_jobs=1)
+    study.optimize(objective, n_trials=100, timeout=None, n_jobs=1)
 
 if __name__ == '__main__':
     main()
