@@ -110,9 +110,9 @@ def objective(trial):
     # 訓練の実行
     trainer.train(nets, criterions, optimizers, train_loader, test_loader, logs, trial=trial, **kwargs)
 
-    best_acc = 100 - logs[0]["epoch_log"][config.trainer.epochs]["test_accuracy"]
+    acc = 100 - logs[0]["epoch_log"][config.trainer.epochs]["test_accuracy"]
     
-    return best_acc
+    return acc
 
 def main():
     global config
