@@ -72,9 +72,9 @@ optim_setting = {
     "name": "AdamW",
     "args":
     {
-        "lr": 1.3e-2,
-        "betas": (0.91, 0.999),
-        "weight_decay": 6.2e-2,
+        "lr": 1.29e-2,
+        "betas": (0.9053, 0.999),
+        "weight_decay": 6.21e-2,
         "amsgrad": True,
     },
     "scheduler_type": 'cosine',
