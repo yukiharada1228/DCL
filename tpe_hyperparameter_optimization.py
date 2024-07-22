@@ -75,8 +75,8 @@ def inform_optuna(**kwargs):
 
 def objective(trial):
     # Optunaが提案する学習率
-    lr = trial.suggest_loguniform('lr', 1e-7, 1.0)
-    weight_decay = trial.suggest_loguniform('weight_decay', 1e-7, 1.0)
+    lr = trial.suggest_loguniform('lr', 3e-3, 1.5e-2)
+    weight_decay = trial.suggest_loguniform('weight_decay', 3e-2, 2e-1)
     beta1 = trial.suggest_uniform('beta1', 0.85, 0.95)
     amsgrad = trial.suggest_categorical('amsgrad', [True, False])
     
