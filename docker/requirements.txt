@@ -1,4 +1,5 @@
 jupyterlab==0.35.3
-optuna==0.13.0
+optuna==3.0.6
 easydict==1.9
 graphviz==0.10.1
+pandas
