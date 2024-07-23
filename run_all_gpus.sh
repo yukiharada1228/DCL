@@ -18,7 +18,5 @@ do
     sleep 5
 done
 
-# すべてのバックグラウンドジョブが終了するのを待つ
-wait
-
-echo "All GPU runs completed"
+# バックグラウンドジョブが終了するのを待たない
+echo "All GPU runs started. They will automatically restart if they crash."
