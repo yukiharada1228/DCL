@@ -403,16 +403,16 @@ def objective_func(trial):
     
     # change config        
     # set loss funcs & gates
-    for source_id, model_losses in enumerate(config.losses):
-        for target_id, _ in enumerate(model_losses):
-            loss_name = trial.suggest_categorical(f'{source_id:02}_{target_id:02}_loss',
-                                                  LOSS_LISTS[source_id][target_id])
+    for target_id, model_losses in enumerate(config.losses):
+        for source_id, _ in enumerate(model_losses):
+            loss_name = trial.suggest_categorical(f'{target_id:02}_{source_id:02}_loss',
+                                                  LOSS_LISTS[target_id][source_id])
             
             loss_args = copy.deepcopy(args_factory.losses[loss_name])
             if "gate" in loss_args.args:
-                gate_name = trial.suggest_categorical(f'{source_id:02}_{target_id:02}_gate', GATE_LIST[source_id][target_id])
+                gate_name = trial.suggest_categorical(f'{target_id:02}_{source_id:02}_gate', GATE_LIST[target_id][source_id])
                 loss_args.args.gate = copy.deepcopy(args_factory.gates[gate_name])
-            config.losses[source_id][target_id] = loss_args
+            config.losses[target_id][source_id] = loss_args
     
     for model_id in range(len(config.models)):
         # set model
