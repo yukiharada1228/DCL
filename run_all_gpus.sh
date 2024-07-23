@@ -8,8 +8,11 @@ for gpu_id in {0..7}
 do
     echo "Starting execution on GPU $gpu_id"
     
-    # GPU_DEVICEとgpu_idを設定してコマンドを実行
+    # 1番目のインスタンス
     GPU_DEVICE=$gpu_id bash -c "GPU_DEVICE=$gpu_id $BASE_CMD --gpu_id=0" &
+    
+    # 2番目のインスタンス
+    GPU_DEVICE=$gpu_id bash -c "GPU_DEVICE=$gpu_id $BASE_CMD --gpu_id=0 --second-instance" &
     
     # 各実行の間に少し待機時間を入れる（オプション）
     sleep 5
