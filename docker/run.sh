@@ -61,7 +61,7 @@ run_container() {
       --user ${nb_uid}:${nb_gid} \
       --gpus "device=${gpu_device}" \
       --name=${container_name} \
-      ${image_name} bash -c "cd /workspace/DCL && $cmd"-
+      ${image_name} bash -c "cd /workspace/DCL && $cmd"
     
     exit_code=$?
     echo "Container ${container_name} exited with code ${exit_code}"
