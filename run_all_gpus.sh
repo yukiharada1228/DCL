@@ -10,12 +10,14 @@ do
     
     # 1番目のインスタンス
     GPU_DEVICE=$gpu_id bash -c "GPU_DEVICE=$gpu_id $BASE_CMD --gpu_id=0" &
+
+    sleep 10
     
     # 2番目のインスタンス
     GPU_DEVICE=$gpu_id bash -c "GPU_DEVICE=$gpu_id $BASE_CMD --gpu_id=0 --second-instance" &
     
     # 各実行の間に少し待機時間を入れる（オプション）
-    sleep 5
+    sleep 10
 done
 
 # バックグラウンドジョブが終了するのを待たない
