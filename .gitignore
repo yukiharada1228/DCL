@@ -1,4 +1,7 @@
 dataset
 pre-train
+optuna
+result
+topn_graph
 
 __pycache__

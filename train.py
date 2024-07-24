@@ -68,25 +68,24 @@ manualSeed = 0
 if args.dataset == "CIFAR10":
     DATA_PATH = "./dataset/CIFAR-10/"
     NUM_CLASS = 10
-    SCHEDULE = [60,120,180]
     EPOCHS = 200    
 elif args.dataset == "CIFAR100":
     DATA_PATH = "./dataset/CIFAR-100/"
     NUM_CLASS = 100
-    SCHEDULE = [60,120,180]
     EPOCHS = 200
     
 optim_setting = {
-    "name": "SGD",
+    "name": "AdamW",
     "args":
     {
-        "lr": 0.1,
-        "momentum": 0.9,
-        "weight_decay": 0.0005,
-        "nesterov": True,
+        "lr": 1.3e-2,
+        "betas": (0.90, 0.999),
+        "weight_decay": 6.2e-2,
+        "amsgrad": True,
     },
-    "schedule": SCHEDULE,
-    "gammas": [0.1,0.1,0.1],
+    "scheduler_type": 'cosine',
+    "num_warmup_steps": 10,
+    "num_training_steps": EPOCHS,
 }
 
 config = easydict.EasyDict(
@@ -227,7 +226,7 @@ def create_object(config):
 # In[7]:
 
 
-ckpt_path = "result/0000/checkpoint/checkpoint_epoch_200.pkl"
+ckpt_path = "checkpoint/checkpoint_epoch_200.pkl"
 
 args_factory = easydict.EasyDict({
     "models": {
@@ -341,8 +340,8 @@ def inform_optuna(**kwargs):
     error = 100 - logs[0]["epoch_log"][epoch]["test_accuracy"]
     trial.report(error, step=epoch)
     
-    if trial.should_prune(epoch):
-        raise optuna.structs.TrialPruned()
+    if trial.should_prune():
+        raise optuna.TrialPruned()
     return
 
 
@@ -404,16 +403,16 @@ def objective_func(trial):
     
     # change config        
     # set loss funcs & gates
-    for source_id, model_losses in enumerate(config.losses):
-        for target_id, _ in enumerate(model_losses):
-            loss_name = trial.suggest_categorical(f'{source_id:02}_{target_id:02}_loss',
-                                                  LOSS_LISTS[source_id][target_id])
+    for target_id, model_losses in enumerate(config.losses):
+        for source_id, _ in enumerate(model_losses):
+            loss_name = trial.suggest_categorical(f'{target_id:02}_{source_id:02}_loss',
+                                                  LOSS_LISTS[target_id][source_id])
             
             loss_args = copy.deepcopy(args_factory.losses[loss_name])
             if "gate" in loss_args.args:
-                gate_name = trial.suggest_categorical(f'{source_id:02}_{target_id:02}_gate', GATE_LIST[source_id][target_id])
+                gate_name = trial.suggest_categorical(f'{target_id:02}_{source_id:02}_gate', GATE_LIST[target_id][source_id])
                 loss_args.args.gate = copy.deepcopy(args_factory.gates[gate_name])
-            config.losses[source_id][target_id] = loss_args
+            config.losses[target_id][source_id] = loss_args
     
     for model_id in range(len(config.models)):
         # set model
