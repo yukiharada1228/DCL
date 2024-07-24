@@ -32,7 +32,7 @@ parser.add_argument('--num_nodes', type=int, default=3)
 parser.add_argument('--target_model', type=str, default="ResNet32")
 parser.add_argument('--dataset', type=str, choices=["CIFAR10", "CIFAR100"], default="CIFAR100")
 parser.add_argument('--gpu_id', type=int, default=0)
-parser.add_argument('--num_trial', type=int, default=1500)
+parser.add_argument('--num_trial', type=int, default=50)
 parser.add_argument('--optuna_dir', type=str, default="./result/")
 
 
@@ -44,7 +44,7 @@ except SystemExit:
         "--target_model", "ResNet32",
         "--dataset", "CIFAR100",
         "--gpu_id", "0",
-        "--num_trial", "1500",
+        "--num_trial", "50",
         "--optuna_dir", "./result/",
     ])
 
@@ -452,7 +452,7 @@ def objective_func(trial):
     
     # raise exception if target model is pretrained.
     if config.models[0].load_weight.path is not None:
-        class BlacklistError(optuna.structs.OptunaError):
+        class BlacklistError(optuna.exceptions.OptunaError):
             pass
         raise BlacklistError()
     
@@ -471,10 +471,8 @@ def objective_func(trial):
 
 utils.make_dirs(args.optuna_dir)
 
-sampler = optuna.samplers.RandomSampler()
-pruner = optuna.pruners.SuccessiveHalvingPruner(min_resource=1,
-                                                reduction_factor=2,
-                                                min_early_stopping_rate=0)
+sampler = optuna.samplers.TPESampler(multivariate=True)
+pruner = optuna.pruners.NopPruner()
 
 db_path = os.path.join(args.optuna_dir, "optuna.db")
 study = optuna.create_study(storage=f"sqlite:///{db_path}",
