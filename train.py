@@ -323,6 +323,11 @@ args_factory = easydict.EasyDict({
             "name": "LinearGate",
             "args": {},
         },
+        "NegativeLinearGate":
+        {
+            "name": "NegativeLinearGate",
+            "args": {},
+        },
     },
 })
 
@@ -360,7 +365,7 @@ LOSS_LISTS = [
 
 GATE_LIST = [
     [
-        ["ThroughGate", "CutoffGate", "CorrectGate", "LinearGate"]
+        ["ThroughGate", "CutoffGate", "CorrectGate", "LinearGate", "NegativeLinearGate"]
         for i in range(args.num_nodes)
     ]
     for j in range(args.num_nodes)
