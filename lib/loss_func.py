@@ -222,3 +222,26 @@ class CorrectGate(_BaseGate):
         
         return soft_loss
 
+
+# ## NegativeLinear
+
+# In[1]:
+
+
+class NegativeLinearGate(_BaseGate):
+    def f(self, loss_per_sample, log, **kwargs):
+        if log is not None:
+            self.end_ite = log.iteration
+            
+        loss_weight = 1.0 - self.parent.ite / self.end_ite
+        
+        soft_loss = loss_per_sample.mean()
+        soft_loss = soft_loss * loss_weight
+                
+        if log is not None:
+            source_id = kwargs["_source_id"]
+            target_id = kwargs["_target_id"]
+            log["ite_log"][self.parent.ite][f"{target_id:02}_{source_id:02}_linear_weight"] = float(loss_weight)
+            
+        return soft_loss
+

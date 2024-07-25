@@ -4,12 +4,12 @@ Implementation of "Knowledge Transfer Graph for Deep Collaborative Learning" ([a
 
 
 ## Environment
- - python 3.6.8
- - ipython 7.6.0
+ - python 3.6.9
+ - ipython 7.8.0
  - jupyterlab 0.35.3
- - pytorch 1.1.0
- - torchvision 0.3.0
- - Optuna 0.13.0
+ - pytorch 1.2.0
+ - torchvision 0.4.0
+ - Optuna 3.0.6
  - easydict 1.9
  - graphviz 0.10.1
 

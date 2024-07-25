@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 実行するコマンドの設定
-BASE_CMD="./docker/run.sh ipython ./train.py -- --num_nodes=3 --target_model=ResNet32 --dataset=CIFAR100 --num_trial=1500 --optuna_dir=./result/"
+BASE_CMD="./docker/run.sh ipython ./train.py -- --num_nodes=3 --target_model=ResNet32 --dataset=CIFAR100 --num_trial=50 --optuna_dir=./result/"
 
 # 0から7までのGPUデバイスでループ
 for gpu_id in {0..7}
