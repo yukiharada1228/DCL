@@ -4,9 +4,14 @@
 # In[1]:
 
 
+import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+logger = logging.getLogger(__name__)
+
 
 
 # # Total Loss Function
@@ -71,6 +76,8 @@ class IndependentLoss(_LossBase):
         return
 
     def forward(self, target_output, source_output, label_id, log=None, **kwargs):
+        if len(target_output) == 2:
+            target_output = target_output[0]
         loss_per_sample = F.cross_entropy(target_output, label_id, reduction='none')
         
         kwargs["_student_logits"] = target_output        
@@ -102,6 +109,10 @@ class KLLoss(_LossBase):
         return
 
     def forward(self, target_output, source_output, label_id, log=None, **kwargs):        
+        if len(target_output) == 2:
+            target_output = target_output[1]
+        if len(source_output) == 2:
+            source_output = (source_output[0] + source_output[1]) / 2
         student_logits = target_output
         teacher_logits = source_output.detach()
                 

@@ -7,6 +7,8 @@
 
 
 import os
+import logging
+import sys
 import random
 import easydict
 import copy
@@ -22,6 +24,9 @@ from lib import models as model_fuctory
 from lib import loss_func as loss_func
 from lib import trainer as trainer_module
 from lib import utils
+
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 # In[3]:
@@ -72,9 +77,22 @@ optim_setting = {
     "name": "AdamW",
     "args":
     {
-        "lr": 1.3e-2,
-        "betas": (0.90, 0.999),
-        "weight_decay": 6.2e-2,
+        "lr": 3e-2,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.01,
+        "amsgrad": True,
+    },
+    "scheduler_type": 'cosine',
+    "num_warmup_steps": 10,
+    "num_training_steps": EPOCHS,
+}
+optim_setting_deit = {
+    "name": "AdamW",
+    "args":
+    {
+        "lr": 3e-4,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.01,
         "amsgrad": True,
     },
     "scheduler_type": 'cosine',
@@ -109,6 +127,22 @@ args_factory = easydict.EasyDict({
                 "num_classes": NUM_CLASS,
                 "widen_factor": 2,
                 "dropRate": 0.0
+            },
+        },
+        "DeiT_Tiny":
+        {
+            "name": "deit_tiny_distilled_patch4_32",
+            "args":
+            {
+                "num_classes": NUM_CLASS,
+            },
+        },
+        "DeiT_Small":
+        {
+            "name": "deit_small_distilled_patch4_32",
+            "args":
+            {
+                "num_classes": NUM_CLASS,
             },
         },
     },
@@ -172,7 +206,7 @@ config = easydict.EasyDict(
                     "path": None,
                     "model_id": 0,
                 },
-                "optim": optim_setting,
+                "optim": optim_setting_deit if 'deit' in model.name else optim_setting,
             } 
         ],
         #-----------------------------Loss_func-------------------------------

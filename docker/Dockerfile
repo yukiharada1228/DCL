@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:1.2-cuda10.0-cudnn7-devel
+FROM pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel
 
 # パッケージの更新と必要なツールのインストール
 RUN apt-get update && apt-get install -y \

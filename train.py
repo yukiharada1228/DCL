@@ -5,6 +5,8 @@
 
 
 import os
+import logging
+import sys
 import random
 import easydict
 import copy
@@ -23,16 +25,20 @@ from lib import trainer as trainer_module
 from lib import utils
 
 
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
 # In[3]:
 
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--num_nodes', type=int, default=3)
-parser.add_argument('--target_model', type=str, default="ResNet32")
+parser.add_argument('--num_nodes', type=int, default=7)
+parser.add_argument('--target_model', type=str, default="DeiT_Tiny")
 parser.add_argument('--dataset', type=str, choices=["CIFAR10", "CIFAR100"], default="CIFAR100")
 parser.add_argument('--gpu_id', type=int, default=0)
-parser.add_argument('--num_trial', type=int, default=50)
+parser.add_argument('--num_trial', type=int, default=1500)
 parser.add_argument('--optuna_dir', type=str, default="./result/")
 
 
@@ -40,11 +46,11 @@ try:
     args = parser.parse_args()
 except SystemExit:
     args = parser.parse_args(args=[
-        "--num_nodes", "3",
-        "--target_model", "ResNet32",
+        "--num_nodes", "7",
+        "--target_model", "DeiT_Tiny",
         "--dataset", "CIFAR100",
         "--gpu_id", "0",
-        "--num_trial", "50",
+        "--num_trial", "1500",
         "--optuna_dir", "./result/",
     ])
 
@@ -78,9 +84,22 @@ optim_setting = {
     "name": "AdamW",
     "args":
     {
-        "lr": 1.3e-2,
-        "betas": (0.90, 0.999),
-        "weight_decay": 6.2e-2,
+        "lr": 3e-2,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.01,
+        "amsgrad": True,
+    },
+    "scheduler_type": 'cosine',
+    "num_warmup_steps": 10,
+    "num_training_steps": EPOCHS,
+}
+optim_setting_deit = {
+    "name": "AdamW",
+    "args":
+    {
+        "lr": 3e-4,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.01,
         "amsgrad": True,
     },
     "scheduler_type": 'cosine',
@@ -269,6 +288,30 @@ args_factory = easydict.EasyDict({
                 "path": f"./pre-train/WRN28_2/{ckpt_path}",
             },
         },
+        "DeiT_Tiny":
+        {
+            "name": "deit_tiny_distilled_patch4_32",
+            "args":
+            {
+                "num_classes": NUM_CLASS,
+            },
+            "load_weight":
+            {
+                "path": f"./pre-train/DeiT_Tiny/{ckpt_path}",
+            },
+        },
+        "DeiT_Small":
+        {
+            "name": "deit_small_distilled_patch4_32",
+            "args":
+            {
+                "num_classes": NUM_CLASS,
+            },
+            "load_weight":
+            {
+                "path": f"./pre-train/DeiT_Small/{ckpt_path}",
+            },
+        },
         "Ensemble":
         {
             "name": "Ensemble",
@@ -380,10 +423,10 @@ if args.target_model == "Ensemble":
 MODEL_LISTS = [
     [args.target_model]
 ]+[
-    ["ResNet32"]
+    [args.target_model]
     for i in range(args.num_ens)
 ]+[
-    ["ResNet32", "ResNet110", "WRN28_2"]
+    ["ResNet32", "ResNet110", "WRN28_2", "DeiT_Tiny", "DeiT_Small"]
     for i in range(args.num_nodes - args.num_ens - 1)
 ]
 
@@ -422,9 +465,15 @@ def objective_func(trial):
     for model_id in range(len(config.models)):
         # set model
         model_name = trial.suggest_categorical(f"model_{model_id}_name", MODEL_LISTS[model_id])
+        logger.debug({
+            "action": "objective_func",
+            "model_name": model_name,
+        })
         model = copy.deepcopy(args_factory.models[model_name])
         config.models[model_id].name = model.name
         config.models[model_id].args = model.args
+        if "DeiT" in model_name:
+            config.models[model_id].optim = optim_setting_deit
         
         # set model weight
         is_cutoff = all([loss.args.gate.name == "CutoffGate" for loss in config.losses[model_id]]) 
@@ -471,8 +520,10 @@ def objective_func(trial):
 
 utils.make_dirs(args.optuna_dir)
 
-sampler = optuna.samplers.TPESampler(multivariate=True)
-pruner = optuna.pruners.NopPruner()
+sampler = optuna.samplers.RandomSampler()
+pruner = optuna.pruners.SuccessiveHalvingPruner(min_resource=1,
+                                                reduction_factor=2,
+                                                min_early_stopping_rate=0)
 
 db_path = os.path.join(args.optuna_dir, "optuna.db")
 study = optuna.create_study(storage=f"sqlite:///{db_path}",

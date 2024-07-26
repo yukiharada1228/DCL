@@ -1,7 +1,8 @@
 jupyterlab==0.35.3
-optuna==3.0.6
+optuna
 easydict==1.9
 graphviz==0.10.1
-pandas==1.1.5
+pandas
 matplotlib==3.3.4
 plotly==5.18.0
+timm

@@ -60,7 +60,10 @@ class ClassificationTrainer():
             loss = criterion(model_id, outputs, target, log, **kwargs)
             losses += [loss]
             
-            acc = self.calc_accuracy(outputs[model_id], target)
+            output = outputs[model_id]
+            if len(output) == 2:
+                output = output[0]
+            acc = self.calc_accuracy(output, target)
             # 現在の学習率を取得
             current_lr = optimizer.param_groups[0]['lr']
             self.update_meter(metric, {
