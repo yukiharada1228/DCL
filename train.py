@@ -443,6 +443,12 @@ def objective_func(trial):
         model_name = trial.suggest_categorical(
             f"model_{model_id}_name", MODEL_LISTS[model_id]
         )
+        if model_id != 0:
+            is_pretrained = trial.suggest_categorical(
+                f"{model_id}_is_pretrained", [0, 1]
+            )
+        else:
+            is_pretrained = 0
         logger.debug(
             {
                 "action": "objective_func",
@@ -454,6 +460,9 @@ def objective_func(trial):
         config.models[model_id].args = model.args
         if "DeiT" in model_name:
             config.models[model_id].optim = optim_setting_deit
+        if is_pretrained:
+            for loss in config.losses[model_id]:
+                loss.args.gate.name = "CutoffGate"
 
         # set model weight
         is_cutoff = all(
