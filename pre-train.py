@@ -24,8 +24,6 @@ from lib import utils
 # In[2]:
 
 
-
-
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
@@ -34,12 +32,12 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--target_model", type=str, default="ResNet32")
+parser.add_argument("--target_model", type=str, default="DeiT_Tiny")
 parser.add_argument(
     "--dataset", type=str, choices=["CIFAR10", "CIFAR100"], default="CIFAR100"
 )
 parser.add_argument("--gpu_id", type=int, default=0)
-parser.add_argument("--save_dir", type=str, default="./pre-train/ResNet32/")
+parser.add_argument("--save_dir", type=str, default="./pre-train/DeiT_Tiny/")
 
 try:
     args = parser.parse_args()
@@ -47,13 +45,13 @@ except SystemExit:
     args = parser.parse_args(
         args=[
             "--target_model",
-            "ResNet32",
+            "DeiT_Tiny",
             "--dataset",
             "CIFAR100",
             "--gpu_id",
             "0",
             "--save_dir",
-            "./pre-train/ResNet32/",
+            "./pre-train/DeiT_Tiny/",
         ]
     )
 
@@ -96,9 +94,9 @@ optim_setting = {
 optim_setting_deit = {
     "name": "AdamW",
     "args": {
-        "lr": 3e-4,
+        "lr": 5e-4,
         "betas": (0.9, 0.999),
-        "weight_decay": 0.01,
+        "weight_decay": 0.05,
         "amsgrad": True,
     },
     "scheduler_type": "cosine",

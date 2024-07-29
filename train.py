@@ -23,8 +23,6 @@ from lib import utils
 # In[2]:
 
 
-
-
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -195,7 +193,9 @@ def create_object(config):
     torch.backends.cudnn.benchmark = False
 
     # load dataset
-    train_loader, test_loader = getattr(dataset_factory, config.dataloader.name)(config)
+    train_loader, test_loader, sampler = getattr(
+        dataset_factory, config.dataloader.name
+    )(config)
 
     # model & loss func & optimizer
     nets = []
@@ -229,7 +229,7 @@ def create_object(config):
         optimizers += [optimizer(net.parameters(), **model_args.optim.args)]
 
     # trainer
-    trainer = getattr(trainer_module, config.trainer.name)(config)
+    trainer = getattr(trainer_module, config.trainer.name)(config, sampler)
 
     # logger
     logs = utils.LogManagers(
@@ -326,6 +326,12 @@ args_factory = easydict.EasyDict(
                     "gate": {},
                 },
             },
+            "HardLoss": {
+                "name": "HardLoss",
+                "args": {
+                    "gate": {},
+                },
+            },
         },
         "gates": {
             "CutoffGate": {
@@ -378,12 +384,14 @@ def inform_optuna(**kwargs):
 
 LOSS_LISTS = [
     [["IndepLoss"] if i == j else ["KLLoss"] for i in range(args.num_nodes)]
+    # [["IndepLoss"] if i == j else ["HardLoss"] for i in range(args.num_nodes)]
     for j in range(args.num_nodes)
 ]
 
 GATE_LIST = [
     [
-        ["ThroughGate", "CutoffGate", "CorrectGate", "LinearGate", "NegativeLinearGate"]
+        # ["ThroughGate", "CutoffGate", "CorrectGate", "LinearGate", "NegativeLinearGate"]
+        ["ThroughGate"]
         for i in range(args.num_nodes)
     ]
     for j in range(args.num_nodes)
@@ -396,7 +404,8 @@ MODEL_LISTS = (
     [[args.target_model]]
     + [[args.target_model] for i in range(args.num_ens)]
     + [
-        ["ResNet32", "ResNet110", "WRN28_2", "DeiT_Tiny", "DeiT_Small"]
+        # ["ResNet32", "ResNet110", "WRN28_2", "DeiT_Tiny", "DeiT_Small", "DeiT_Compact32"]
+        ["ResNet32"]
         for i in range(args.num_nodes - args.num_ens - 1)
     ]
 )
@@ -444,8 +453,14 @@ def objective_func(trial):
             f"model_{model_id}_name", MODEL_LISTS[model_id]
         )
         if model_id != 0:
+            # is_pretrained = trial.suggest_categorical(
+            #     f"{model_id}_is_pretrained", [0, 1]
+            # )
             is_pretrained = trial.suggest_categorical(
-                f"{model_id}_is_pretrained", [0, 1]
+                f"{model_id}_is_pretrained",
+                [
+                    1,
+                ],
             )
         else:
             is_pretrained = 0
@@ -472,6 +487,7 @@ def objective_func(trial):
         if is_cutoff & (not is_ensemble):
             config.models[model_id].load_weight.path = model.load_weight.path
         else:
+            # Fixme: フラクタルDBなど，事前学習済みモデルを使用するならここで読み込む必要がある
             config.models[model_id].load_weight.path = None
 
     config = copy.deepcopy(config)
@@ -528,10 +544,12 @@ def objective_func(trial):
 
 utils.make_dirs(args.optuna_dir)
 
-sampler = optuna.samplers.RandomSampler()
-pruner = optuna.pruners.SuccessiveHalvingPruner(
-    min_resource=1, reduction_factor=2, min_early_stopping_rate=0
-)
+# sampler = optuna.samplers.RandomSampler()
+# pruner = optuna.pruners.SuccessiveHalvingPruner(
+#     min_resource=1, reduction_factor=2, min_early_stopping_rate=0
+# )
+sampler = optuna.samplers.BruteForceSampler()
+pruner = optuna.pruners.NopPruner()
 
 db_path = os.path.join(args.optuna_dir, "optuna.db")
 study = optuna.create_study(

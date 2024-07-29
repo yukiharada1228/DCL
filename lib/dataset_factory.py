@@ -9,6 +9,9 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
+from .randaugment import RandAugmentMC
+from .rasampler import SingleGPURASampler
+
 # # Initializer for worker
 
 # In[15]:
@@ -37,7 +40,9 @@ def CIFAR10(args):
             transforms.RandomHorizontalFlip(),
             transforms.Pad(4, padding_mode="reflect"),
             transforms.RandomCrop(32, padding=0),
+            RandAugmentMC(n=2, m=10),
             transforms.ToTensor(),
+            transforms.RandomErasing(p=0.25),
         ]
     )
 
@@ -94,7 +99,9 @@ def CIFAR100(args):
             transforms.RandomHorizontalFlip(),
             transforms.Pad(4, padding_mode="reflect"),
             transforms.RandomCrop(32, padding=0),
+            RandAugmentMC(n=2, m=10),
             transforms.ToTensor(),
+            transforms.RandomErasing(p=0.25),
         ]
     )
 
@@ -114,10 +121,11 @@ def CIFAR100(args):
         data_path, train=False, download=True, transform=test_transform
     )
 
+    sampler = SingleGPURASampler(train_dataset, shuffle=True, num_repeats=3)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        shuffle=args.train_shuffle,
+        sampler=sampler,
         num_workers=args.workers,
         pin_memory=False,
         drop_last=args.train_drop_last,
@@ -134,4 +142,4 @@ def CIFAR100(args):
         worker_init_fn=worker_initializer(manualSeed).worker_init_fn,
     )
 
-    return train_loader, test_loader
+    return train_loader, test_loader, sampler

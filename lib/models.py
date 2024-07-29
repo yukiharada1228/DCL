@@ -422,6 +422,7 @@ def deit_tiny_distilled_patch4_32(num_classes=10):
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
         num_classes=num_classes,
+        drop_path_rate=0.1,
     )
     model.default_cfg = _cfg()
     return model
@@ -438,6 +439,7 @@ def deit_small_distilled_patch4_32(num_classes=10):
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
         num_classes=num_classes,
+        drop_path_rate=0.1,
     )
     model.default_cfg = _cfg()
     return model
@@ -454,6 +456,7 @@ def deit_base_distilled_patch4_32(num_classes=10):
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
         num_classes=num_classes,
+        drop_path_rate=0.1,
     )
     model.default_cfg = _cfg()
     return model

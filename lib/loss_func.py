@@ -76,21 +76,32 @@ class IndependentLoss(_LossBase):
     def forward(self, target_output, source_output, label_id, log=None, **kwargs):
         if len(target_output) == 2:
             target_output = target_output[0]
-        loss_per_sample = F.cross_entropy(target_output, label_id, reduction="none")
+
+        label_logits = label_id.detach()
+
+        target_softmax = F.softmax(target_output, dim=1)
+        label_softmax = F.softmax(label_logits, dim=1)
+
+        soft_loss_per_sample = self.kl_divergence(
+            target_softmax, label_softmax, log=log
+        )
 
         kwargs["_student_logits"] = target_output
-        identity = torch.eye(target_output.shape[-1], device=target_output.device)
-        onehot_label = identity[label_id]
-        kwargs["_teacher_logits"] = onehot_label
-        kwargs["_label_id"] = label_id
+        kwargs["_label_logits"] = label_logits
 
-        hard_loss = self.gate.f(loss_per_sample, log, **kwargs)
+        soft_loss = self.gate.f(soft_loss_per_sample, log, **kwargs)
 
-        loss = hard_loss * self.args.loss_weight
+        loss = soft_loss
 
         if log is not None:
             self.ite = self.ite + 1
 
+        return loss
+
+    def kl_divergence(self, student, teacher, log=None):
+        kl = teacher * torch.log((teacher / (student + 1e-10)) + 1e-10)
+        kl = kl.sum(dim=1)
+        loss = kl
         return loss
 
 
@@ -138,6 +149,38 @@ class KLLoss(_LossBase):
         kl = teacher * torch.log((teacher / (student + 1e-10)) + 1e-10)
         kl = kl.sum(dim=1)
         loss = kl
+        return loss
+
+
+class HardLoss(_LossBase):
+    def __init__(self, args):
+        super(HardLoss, self).__init__(args)
+        self.gate = globals()[args.gate.name](self, args.gate.args)
+        return
+
+    def forward(self, target_output, source_output, label_id, log=None, **kwargs):
+        if len(target_output) == 2:
+            target_output = target_output[1]
+        if len(source_output) == 2:
+            source_output = (source_output[0] + source_output[1]) / 2
+        student_logits = target_output
+        teacher_logits = source_output.detach()
+
+        loss_per_sample = F.cross_entropy(
+            student_logits, teacher_logits.argmax(dim=1), reduction="none"
+        )
+
+        kwargs["_student_logits"] = student_logits
+        kwargs["_teacher_logits"] = teacher_logits
+        kwargs["_label_id"] = label_id
+
+        hard_loss = self.gate.f(loss_per_sample, log, **kwargs)
+
+        loss = hard_loss
+
+        if log is not None:
+            self.ite = self.ite + 1
+
         return loss
 
 

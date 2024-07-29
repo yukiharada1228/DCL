@@ -3,18 +3,31 @@
 # In[1]:
 
 
+import logging
 import pdb
 
 import torch
+from timm.data import Mixup
 
 from lib import utils
+
+logger = logging.getLogger(__name__)
+
+
+def one_hot(x, num_classes, on_value=1.0, off_value=0.0):
+    x = x.long().view(-1, 1)
+    return torch.full((x.size()[0], num_classes), off_value, device=x.device).scatter_(
+        1, x, on_value
+    )
+
 
 # In[48]:
 
 
 class ClassificationTrainer:
-    def __init__(self, args):
+    def __init__(self, args, sampler):
         self.args = args
+        self.sampler = sampler
         pass
 
     def to_cuda(self, input_, target):
@@ -66,7 +79,9 @@ class ClassificationTrainer:
             output = outputs[model_id]
             if len(output) == 2:
                 output = output[0]
-            acc = self.calc_accuracy(output, target)
+            # acc = self.calc_accuracy(output, target)
+            # Fixme: Mixupの影響で正解率を通常の計算では出すことができない
+            acc = torch.Tensor([0.0])
             # 現在の学習率を取得
             current_lr = optimizer.param_groups[0]["lr"]
             self.update_meter(
@@ -99,7 +114,6 @@ class ClassificationTrainer:
         """
         train on dataset for one epoch
         """
-
         metrics = [
             {
                 "loss": utils.AverageMeter(),
@@ -109,11 +123,29 @@ class ClassificationTrainer:
             for _ in range(len(models))
         ]
 
-        for model in models:
-            model.train()
+        for i, model in enumerate(models):
+            is_cutoff = all(
+                [loss.args.gate.name == "CutoffGate" for loss in self.args.losses[i]]
+            )
+            if is_cutoff:
+                model.eval()
+            else:
+                model.train()
+        # Fixme: num_classesがハードコーディングになっている．
+        mixup_fn = Mixup(
+            mixup_alpha=0.8,
+            cutmix_alpha=1.0,
+            cutmix_minmax=None,
+            prob=1.0,
+            switch_prob=0.5,
+            mode="batch",
+            label_smoothing=0.1,
+            num_classes=100,
+        )
 
         for i, (input_, target) in enumerate(data_loader):
             input_, target = self.to_cuda(input_, target)
+            input_, target = mixup_fn(input_, target)
             self.train_on_batch(
                 input_, target, models, criterions, optimizers, logs, metrics, **kwargs
             )
@@ -130,7 +162,9 @@ class ClassificationTrainer:
         for model_id, (criterion, log, metric) in enumerate(
             zip(criterions, logs.net, metrics)
         ):
-            loss = criterion(model_id, outputs, target, log=None, **kwargs)
+            # Fixme: num_classesがハードコーディング
+            _target = one_hot(target, num_classes=100)
+            loss = criterion(model_id, outputs, _target, log=None, **kwargs)
             acc = self.calc_accuracy(outputs[model_id], target)
 
             self.update_meter(
@@ -184,6 +218,8 @@ class ClassificationTrainer:
         for epoch in range(self.args.trainer.start_epoch, self.args.trainer.epochs + 1):
             print("epoch %d" % epoch)
             start_time = time.time()
+            
+            self.sampler.set_epoch(epoch)
 
             for optimizer, model_args in zip(optimizers, self.args.models):
                 utils.adjust_learning_rate(optimizer, epoch, model_args.optim)
