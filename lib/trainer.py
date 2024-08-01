@@ -79,8 +79,8 @@ class ClassificationTrainer:
             output = outputs[model_id]
             if len(output) == 2:
                 output = output[0]
+            # FIXME: Mixupの影響で正解率を通常の計算では出すことができない
             # acc = self.calc_accuracy(output, target)
-            # Fixme: Mixupの影響で正解率を通常の計算では出すことができない
             acc = torch.Tensor([0.0])
             # 現在の学習率を取得
             current_lr = optimizer.param_groups[0]["lr"]
@@ -131,7 +131,7 @@ class ClassificationTrainer:
                 model.eval()
             else:
                 model.train()
-        # Fixme: num_classesがハードコーディングになっている．
+        # FIXME: num_classesがハードコーディングになっている．
         mixup_fn = Mixup(
             mixup_alpha=0.8,
             cutmix_alpha=1.0,
@@ -162,7 +162,7 @@ class ClassificationTrainer:
         for model_id, (criterion, log, metric) in enumerate(
             zip(criterions, logs.net, metrics)
         ):
-            # Fixme: num_classesがハードコーディング
+            # FIXME: num_classesがハードコーディング
             _target = one_hot(target, num_classes=100)
             loss = criterion(model_id, outputs, _target, log=None, **kwargs)
             acc = self.calc_accuracy(outputs[model_id], target)

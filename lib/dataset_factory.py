@@ -62,6 +62,7 @@ def CIFAR10(args):
         data_path, train=False, download=True, transform=test_transform
     )
 
+    # FIXME: SingleGPURASamplerが未実装
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,

@@ -1,7 +1,7 @@
 dataset
 pre-train
 optuna
-result
+result*
 topn_graph
 .ipynb_checkpoints
 

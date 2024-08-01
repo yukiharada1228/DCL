@@ -39,7 +39,7 @@ parser.add_argument(
 )
 parser.add_argument("--gpu_id", type=int, default=0)
 parser.add_argument("--num_trial", type=int, default=1500)
-parser.add_argument("--optuna_dir", type=str, default="./result/")
+parser.add_argument("--optuna_dir", type=str, default="./result_deit/")
 
 
 try:
@@ -392,7 +392,7 @@ LOSS_LISTS = [
 
 GATE_LIST = [
     [
-        ["ThroughGate", "CutoffGate", "LinearGate", "NegativeLinearGate"]
+        ["ThroughGate"]
         for i in range(args.num_nodes)
     ]
     for j in range(args.num_nodes)
@@ -405,7 +405,7 @@ MODEL_LISTS = (
     [[args.target_model]]
     + [[args.target_model] for i in range(args.num_ens)]
     + [
-        ["ResNet32", "ResNet110", "WRN28_2", "DeiT_Tiny", "DeiT_Small"]
+        ["ResNet32"]
         for i in range(args.num_nodes - args.num_ens - 1)
     ]
 )
@@ -454,7 +454,10 @@ def objective_func(trial):
         )
         if model_id != 0:
             is_pretrained = trial.suggest_categorical(
-                f"{model_id}_is_pretrained", [0, 1]
+                f"{model_id}_is_pretrained",
+                [
+                    1,
+                ],
             )
         else:
             is_pretrained = 0
@@ -481,7 +484,7 @@ def objective_func(trial):
         if is_cutoff & (not is_ensemble):
             config.models[model_id].load_weight.path = model.load_weight.path
         else:
-            # FIXME: フラクタルDBなど，事前学習済みモデルを使用するならここで読み込む必要がある
+            # Fixme: フラクタルDBなど，事前学習済みモデルを使用するならここで読み込む必要がある
             config.models[model_id].load_weight.path = None
 
     config = copy.deepcopy(config)
@@ -538,11 +541,7 @@ def objective_func(trial):
 
 utils.make_dirs(args.optuna_dir)
 
-# sampler = optuna.samplers.RandomSampler()
-# pruner = optuna.pruners.SuccessiveHalvingPruner(
-#     min_resource=1, reduction_factor=2, min_early_stopping_rate=0
-# )
-sampler = optuna.samplers.TPESampler(multivariate=True)
+sampler = optuna.samplers.BruteForceSampler()
 pruner = optuna.pruners.NopPruner()
 
 db_path = os.path.join(args.optuna_dir, "optuna.db")
